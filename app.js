@@ -235,30 +235,61 @@ async function probePipeline(){
     if(d.ok)setStatus('','الوكلاء متصلون');else setStatus('error','بوابة غير مهيأة');}
   catch{setStatus('error','البوابة غير متاحة');}
 }
-async function runPipeline(){
-  const s=current();if(!s||state.busy)return;
-  state.busy=true;$('#send-btn').disabled=true;setStatus('thinking','الوكلاء يعملون…');
-  const jobId=uid();
-  const live={role:'assistant',content:'',pipeline:{master:'done',logic:'active',codegen:'idle',merge:'idle'}};
-  s.messages.push(live);drawMessages();
-  const box=$('#messages'),liveEl=box.lastElementChild,liveBubble=liveEl.querySelector('.bubble');
-  const t0=Date.now();
-  try{
-    const r=await fetch(`${CFG.API_BASE}/api/chat`,{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({job_id:jobId,messages:s.messages.slice(0,-1).map(m=>({role:m.role,content:m.content}))})});
-    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||`HTTP ${r.status}`);}
-    const result=await pollResult(jobId,p=>{live.pipeline=p;
-      if(liveEl.isConnected)liveBubble.innerHTML=renderPipeline(p);});
-    live.content=result.answer||'لم تُعد العقد محتوى.';
-    live.nodes=result.nodes||{};live.elapsed=Date.now()-t0;delete live.pipeline;
-    save();drawMessages();setStatus('','الوكلاء متصلون');
-  }catch(err){
-    console.error(err);
-    live.content=`**فشل خط الأنابيب**\n\nالسبب: ${err.message}\n\nتحقق من:\n- Worker منشور ويحمل GITHUB_PAT\n- Master استقبل repository_dispatch (تبويب Actions)\n- CROSS_REPO_PAT يملك Contents:write على العقدتين`;
-    delete live.pipeline;save();drawMessages();setStatus('error','فشل');
-  }finally{state.busy=false;$('#send-btn').disabled=false;box.scrollTop=box.scrollHeight;}
+
+async function runPipeline() {
+  const s = current(); if (!s || state.busy) return;
+  state.busy = true;
+  $("#send-btn").disabled = true;
+  setStatus("thinking", "الذكاء الاصطناعي يفكر...");
+
+  const live = { role: "assistant", content: "", pipeline: { master: "done", logic: "done", codegen: "done", merge: "done" } };
+  s.messages.push(live);
+  drawMessages();
+  const box = $("#messages");
+  const liveEl = box.lastElementChild;
+  const liveBubble = liveEl.querySelector(".bubble");
+  liveBubble.innerHTML = "<div class="typing"><span></span><span></span><span></span></div>";
+
+  try {
+    const history = s.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+    
+    // الاتصال المباشر بـ GitHub Models
+    const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer ghp_ضع_التوكن_هنا_بصلاحية_models"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o", // شبكة عصبية قوية جداً في البرمجة
+        messages: [
+          { role: "system", content: "أنت مبرمج خبير. اكتب الكود المطلوب فقط باللغة العربية، واستخدم ``` للكود." },
+          ...history
+        ],
+        temperature: 0.7
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || "HTTP " + res.status);
+    }
+    
+    const data = await res.json();
+    live.content = data.choices[0].message.content;
+    delete live.pipeline;
+    save(); drawMessages(); setStatus("", "الوكلاء متصلون");
+  } catch (err) {
+    live.content = "**فشل الاتصال بـ GitHub Models**\n\nالسبب: " + err.message;
+    delete live.pipeline;
+    save(); drawMessages(); setStatus("error", "فشل");
+  } finally {
+    state.busy = false;
+    $("#send-btn").disabled = false;
+    box.scrollTop = box.scrollHeight;
+  }
 }
+
 async function pollResult(jobId,onProgress){
   const url=`https://raw.githubusercontent.com/${CFG.OWNER}/${CFG.REPO}/${CFG.BRANCH}/results/${jobId}.json`;
   const t0=Date.now();let stage=0;
