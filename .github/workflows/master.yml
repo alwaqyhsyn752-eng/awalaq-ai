@@ -13,7 +13,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { token: ${{ secrets.GITHUB_TOKEN }} }
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract payload
         id: p
         env:
@@ -45,7 +46,7 @@ jobs:
             [ -z "$L" ] && L=$(get awalaq-logic||true)
             [ -z "$C" ] && C=$(get awalaq-codegen||true)
             [ -n "$L" ] && [ -n "$C" ] && break; sleep 10; done
-          [ -z "$L" ] || [ -z "$C" ] && { echo "::error::timeout"; exit 1; } || true
+          if [ -z "$L" ] || [ -z "$C" ]; then echo "::error::timeout"; exit 1; fi
           echo "$L">logic.json; echo "$C">codegen.json
       - name: Merge
         env: { JOB: "${{ steps.p.outputs.job_id }}" }
