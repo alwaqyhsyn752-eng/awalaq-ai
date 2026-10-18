@@ -1,9 +1,7 @@
 plugins { id 'com.android.application' }
-
 android {
     namespace 'io.github.alwaqyhsyn752.awalaq'
     compileSdk 34
-
     defaultConfig {
         applicationId "io.github.alwaqyhsyn752.awalaq"
         minSdk 26
@@ -11,7 +9,6 @@ android {
         versionCode 1
         versionName "1.0.0"
     }
-
     signingConfigs {
         release {
             storeFile file('release.keystore')
@@ -20,14 +17,12 @@ android {
             keyPassword 'awalaq123'
         }
     }
-
     buildTypes {
         release {
             minifyEnabled false
             signingConfig signingConfigs.release
         }
     }
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

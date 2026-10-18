@@ -4,3 +4,5 @@ node_modules/
 *.log
 android/app/build/
 android/app/release.keystore
+android/app/build/
+android/app/release.keystore
