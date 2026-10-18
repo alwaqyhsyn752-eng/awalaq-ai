@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#04050d"><link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css"><title>عو.꙰لق — اصطدام المستقبل في الماضي</title>
+</head><body>
+<div id="splash"><canvas id="three-canvas"></canvas>
+<div class="splash-overlay"><div class="brand">
+<div class="brand-mark">◈</div><h1 class="brand-title">عو.꙰لق</h1>
+<p class="brand-tag">اصطدام المستقبل في الماضي</p></div>
+<div class="loading-wrap"><div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+<div class="loading-text" id="loading-text">تهيئة الغرفة البلورية…</div></div></div>
+<button class="skip-btn" id="skip-btn">تخطي ⟢</button></div>
+<div id="app" class="hidden">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header"><div class="logo"><span class="logo-icon">◈</span><span class="logo-text">عو.꙰لق</span></div>
+<button id="new-chat-btn" class="new-chat-btn">+ محادثة جديدة</button></div>
+<div class="sessions-list" id="sessions-list"></div>
+<div class="sidebar-footer"><div class="node-status"><span class="node-dot"></span>
+<span>Master · Logic · CodeGen</span></div>
+<button id="clear-all-btn" class="danger-btn">مسح كل المحادثات</button></div></aside>
+<main class="main-area"><header class="chat-header">
+<button id="toggle-sidebar" class="icon-btn">☰</button>
+<div class="header-block"><div class="header-title" id="header-title">محادثة جديدة</div>
+<div class="header-sub" id="header-sub">خط الأنابيب جاهز</div></div>
+<div class="status-indicator" id="status-indicator"><span class="dot"></span>
+<span id="status-text">جارٍ الفحص…</span></div></header>
+<div class="messages" id="messages"></div>
+<div class="composer"><div class="attachments-preview" id="attachments-preview"></div>
+<div class="composer-inner">
+<button class="icon-btn" id="attach-btn" title="إرفاق ملف">⟢</button>
+<input type="file" id="file-input" multiple hidden accept=".js,.ts,.py,.go,.rs,.java,.json,.yaml,.md,.txt,.html,.css,.sql">
+<textarea id="user-input" rows="1" placeholder="أرسل طلبك البرمجي… (Ctrl+Enter للإرسال)"></textarea>
+<button class="icon-btn" id="mic-btn" title="صوت">◉</button>
+<button class="send-btn" id="send-btn"><svg viewBox="0 0 24 24" width="20" height="20">
+<path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button></div></div></main></div>
+<div id="toast"></div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script src="config.js"></script><script type="module" src="app.js"></script>
+</body></html>

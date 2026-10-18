@@ -1,0 +1,69 @@
+name: Master Node
+on:
+  repository_dispatch:
+    types: [user_request]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: master-${{ github.event.client_payload.job_id || github.run_id }}
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { token: ${{ secrets.GITHUB_TOKEN }} }
+      - name: Extract payload
+        id: p
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          node -e '
+            const p=JSON.parse(process.env.PAYLOAD||"{}");const fs=require("fs");
+            const job=p.job_id||("m-"+Date.now());const msgs=p.messages||[];
+            const last=msgs.filter(m=>m.role==="user").pop()||{content:"مرحباً"};
+            fs.writeFileSync("job.json",JSON.stringify({job_id:job,messages:msgs,prompt:String(last.content||"").slice(0,8000)},null,2));
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"job_id="+job+"\n");'
+      - name: Dispatch Logic
+        env: { PAT: "${{ secrets.CROSS_REPO_PAT }}", OWNER: "${{ github.repository_owner }}" }
+        run: |
+          BODY=$(node -e 'const j=require("./job.json");console.log(JSON.stringify({event_type:"analyze",client_payload:{job_id:j.job_id,prompt:j.prompt,history:j.messages.slice(-8)}}));')
+          curl -sS -X POST -H "Authorization: Bearer $PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$OWNER/awalaq-logic/dispatches" -d "$BODY"
+      - name: Dispatch CodeGen
+        env: { PAT: "${{ secrets.CROSS_REPO_PAT }}", OWNER: "${{ github.repository_owner }}" }
+        run: |
+          BODY=$(node -e 'const j=require("./job.json");console.log(JSON.stringify({event_type:"generate",client_payload:{job_id:j.job_id,prompt:j.prompt,history:j.messages.slice(-8)}}));')
+          curl -sS -X POST -H "Authorization: Bearer $PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$OWNER/awalaq-codegen/dispatches" -d "$BODY"
+      - name: Wait for nodes
+        env: { PAT: "${{ secrets.CROSS_REPO_PAT }}", OWNER: "${{ github.repository_owner }}", JOB: "${{ steps.p.outputs.job_id }}" }
+        run: |
+          get(){ curl -sS -H "Authorization: Bearer $PAT" "https://api.github.com/repos/$OWNER/$1/contents/out/$JOB.json" -H "Accept: application/vnd.github.raw" 2>/dev/null; }
+          L="";C="";for i in $(seq 1 60);do
+            [ -z "$L" ] && L=$(get awalaq-logic||true)
+            [ -z "$C" ] && C=$(get awalaq-codegen||true)
+            [ -n "$L" ] && [ -n "$C" ] && break; sleep 10; done
+          [ -z "$L" ] || [ -z "$C" ] && { echo "::error::timeout"; exit 1; } || true
+          echo "$L">logic.json; echo "$C">codegen.json
+      - name: Merge
+        env: { JOB: "${{ steps.p.outputs.job_id }}" }
+        run: |
+          mkdir -p results
+          node -e '
+            const fs=require("fs");const job=process.env.JOB;
+            const L=JSON.parse(fs.readFileSync("logic.json","utf8"));
+            const C=JSON.parse(fs.readFileSync("codegen.json","utf8"));
+            const ans=[C.answer||"","","---","**تحليل المنطق:** "+(L.summary||"—"),
+              L.risks?.length?"**مخاطر:** "+L.risks.join(" · "):"",
+              "**النمط:** `"+(L.intent||"general")+"`"].filter(Boolean).join("\n");
+            fs.writeFileSync("results/"+job+".json",JSON.stringify({job_id:job,answer:ans,nodes:{logic:L.model||"rules",codegen:C.model||"rules"},meta:{logic:L,codegen:C,ts:new Date().toISOString()}},null,2));
+            fs.writeFileSync("version.json",JSON.stringify({version:"1.0."+Math.floor(Date.now()/60000),built:new Date().toISOString()},null,2));'
+      - name: Commit
+        run: |
+          git config user.name "awalaq-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add results version.json
+          git commit -m "result: ${{ steps.p.outputs.job_id }}" || echo none
+          git push

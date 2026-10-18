@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.deploy
+*.log
+android/app/build/
+android/app/release.keystore
