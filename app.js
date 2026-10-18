@@ -4,8 +4,7 @@ const CFG = window.AWALAQ;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const esc = t => { const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; };
 
-// ⚠️ ضع التوكن الخاص بك هنا بين علامات التنصيص
-const GITHUB_TOKEN = "ghp_ضع_التوكن_هنا"; 
+const GITHUB_TOKEN = "ضع_توكنك_هنا"; 
 
 let splashDone = false;
 async function initSplash() {
@@ -13,7 +12,6 @@ async function initSplash() {
   try { THREE = await import('three'); } catch { return finishSplash(); }
   const canvas = $('#three-canvas');
   if (!(canvas.getContext('webgl2') || canvas.getContext('webgl'))) return finishSplash();
-  // (كود الشاشة 3D محذوف هنا للاختصار، سيعمل تلقائياً)
   setTimeout(finishSplash, 2000);
 }
 function finishSplash() {
@@ -24,7 +22,7 @@ function finishSplash() {
 }
 $('#skip-btn').onclick = finishSplash;
 
-const K_SESS = 'awalaq.sessions.v4', K_ACTIVE = 'awalaq.active.v4';
+const K_SESS = 'awalaq.sessions.v7', K_ACTIVE = 'awalaq.active.v7';
 const state = { sessions: [], activeId: null, attachments: [], busy: false };
 const load = () => { try { state.sessions = JSON.parse(localStorage.getItem(K_SESS) || '[]'); const a = localStorage.getItem(K_ACTIVE); if (a) state.activeId = a; else if (state.sessions.length) state.activeId = state.sessions[0].id; } catch { state.sessions = []; } };
 const save = () => { localStorage.setItem(K_SESS, JSON.stringify(state.sessions)); if (state.activeId) localStorage.setItem(K_ACTIVE, state.activeId); };
@@ -57,8 +55,7 @@ async function send() {
   const live = { role: 'assistant', content: 'جاري التوليد...' }; s.messages.push(live); drawMessages();
 
   try {
-    // الاتصال المباشر والسريع بـ GitHub Models
-    const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+    const res = await fetch("https://models.github.ai/inference/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GITHUB_TOKEN}` },
       body: JSON.stringify({
