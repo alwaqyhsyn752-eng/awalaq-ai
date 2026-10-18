@@ -258,7 +258,7 @@ async function runPipeline() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer ghp_ضع_التوكن_هنا_بصلاحية_models"
+        "Authorization": "Bearer التوكن_هنا"
       },
       body: JSON.stringify({
         model: "gpt-4o", // شبكة عصبية قوية جداً في البرمجة
