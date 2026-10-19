@@ -1,86 +1,120 @@
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const CFG = window.AWALAQ;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-const esc = t => { const d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; };
 
-const GITHUB_TOKEN = "ضع_توكنك_هنا"; 
+// رابط الـ Worker الخاص بك
+const WORKER_URL = "https://round-dew-b9e5awalaq-gateway.alwaqyhsyn752.workers.dev/api/chat";
 
 let splashDone = false;
-async function initSplash() {
-  let THREE;
-  try { THREE = await import('three'); } catch { return finishSplash(); }
-  const canvas = $('#three-canvas');
-  if (!(canvas.getContext('webgl2') || canvas.getContext('webgl'))) return finishSplash();
-  setTimeout(finishSplash, 2000);
-}
 function finishSplash() {
   if (splashDone) return; splashDone = true;
-  $('#splash').style.display = 'none';
+  const sp = $('#splash');
+  if (sp) sp.style.display = 'none';
   $('#app').classList.remove('hidden');
-  $('#user-input').focus();
+  $('#status-text').textContent = 'متصل';
 }
-$('#skip-btn').onclick = finishSplash;
+setTimeout(finishSplash, 2000);
+const skipBtn = $('#skip-btn');
+if (skipBtn) skipBtn.onclick = finishSplash;
 
-const K_SESS = 'awalaq.sessions.v7', K_ACTIVE = 'awalaq.active.v7';
-const state = { sessions: [], activeId: null, attachments: [], busy: false };
-const load = () => { try { state.sessions = JSON.parse(localStorage.getItem(K_SESS) || '[]'); const a = localStorage.getItem(K_ACTIVE); if (a) state.activeId = a; else if (state.sessions.length) state.activeId = state.sessions[0].id; } catch { state.sessions = []; } };
-const save = () => { localStorage.setItem(K_SESS, JSON.stringify(state.sessions)); if (state.activeId) localStorage.setItem(K_ACTIVE, state.activeId); };
+const K_SESS = 'awalaq.sessions.v11', K_ACTIVE = 'awalaq.active.v11';
+const state = { sessions: [], activeId: null, busy: false };
+
+function load() {
+  try {
+    state.sessions = JSON.parse(localStorage.getItem(K_SESS) || '[]');
+    const a = localStorage.getItem(K_ACTIVE);
+    if (a) state.activeId = a;
+    else if (state.sessions.length) state.activeId = state.sessions[0].id;
+  } catch { state.sessions = []; }
+}
+function save() {
+  localStorage.setItem(K_SESS, JSON.stringify(state.sessions));
+  if (state.activeId) localStorage.setItem(K_ACTIVE, state.activeId);
+}
 const current = () => state.sessions.find(s => s.id === state.activeId);
 
-function newSession() { const s = { id: uid(), title: 'محادثة جديدة', messages: [] }; state.sessions.unshift(s); state.activeId = s.id; save(); drawSessions(); drawMessages(); }
-function drawSessions() { const e = $('#sessions-list'); e.innerHTML = ''; state.sessions.forEach(s => { const d = document.createElement('div'); d.className = `session-item ${s.id === state.activeId ? 'active' : ''}`; d.textContent = s.title; d.onclick = () => { state.activeId = s.id; save(); drawSessions(); drawMessages(); }; e.appendChild(d); }); }
+function newSession() {
+  const s = { id: uid(), title: 'محادثة جديدة', messages: [] };
+  state.sessions.unshift(s); state.activeId = s.id;
+  save(); drawSessions(); drawMessages();
+}
+
+function drawSessions() {
+  const e = $('#sessions-list'); if (!e) return;
+  e.innerHTML = '';
+  state.sessions.forEach(s => {
+    const d = document.createElement('div');
+    d.className = `session-item ${s.id === state.activeId ? 'active' : ''}`;
+    d.textContent = s.title;
+    d.onclick = () => { state.activeId = s.id; save(); drawSessions(); drawMessages(); };
+    e.appendChild(d);
+  });
+}
+
 function drawMessages() {
-  const box = $('#messages'); const s = current(); box.innerHTML = '';
-  if (!s || !s.messages.length) { box.innerHTML = '<div style="text-align:center; padding:2rem; color:#7d8bb5;">مرحباً بك. اكتب طلبك البرمجي وسيتم الرد فوراً.</div>'; return; }
+  const box = $('#messages'); if (!box) return;
+  const s = current(); box.innerHTML = '';
+  if (!s || !s.messages.length) {
+    box.innerHTML = '<div style="text-align:center; padding:2rem; color:#7d8bb5;">مرحباً بك. اكتب طلبك البرمجي وسيتم الرد فوراً.</div>';
+    return;
+  }
   s.messages.forEach(m => {
-    const d = document.createElement('div'); d.className = `message ${m.role}`;
-    d.innerHTML = `<div class="bubble" style="white-space:pre-wrap;">${esc(m.content)}</div>`;
+    const d = document.createElement('div');
+    d.className = `message ${m.role}`;
+    d.innerHTML = `<div class="bubble" style="white-space:pre-wrap;">${m.content}</div>`;
     box.appendChild(d);
   });
   box.scrollTop = box.scrollHeight;
 }
 
 const input = $('#user-input');
-input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } });
-$('#send-btn').onclick = send;
-$('#new-chat-btn').onclick = newSession;
+if (input) {
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+  });
+}
+const sendBtn = $('#send-btn');
+if (sendBtn) sendBtn.onclick = send;
+const newBtn = $('#new-chat-btn');
+if (newBtn) newBtn.onclick = newSession;
 
 async function send() {
-  let s = current(); if (source .env.deploy) { newSession(); s = current(); }  s.messages.push({ role: 'user', content: text }); input.value = ''; save(); drawMessages();
+  const text = input.value.trim();
+  if (!text || state.busy) return;
   
-  state.busy = true; $('#send-btn').disabled = true; $('#status-text').textContent = 'الوكلاء يعملون...';
-  const live = { role: 'assistant', content: 'جاري التفكير والدمج...' }; s.messages.push(live); drawMessages();
+  let s = current();
+  if (!s) { newSession(); s = current(); }
+  
+  s.messages.push({ role: 'user', content: text });
+  if (s.title === 'محادثة جديدة') s.title = text.slice(0, 30);
+  input.value = ''; save(); drawSessions(); drawMessages();
+  
+  state.busy = true; sendBtn.disabled = true; $('#status-text').textContent = 'يفكر...';
+  const live = { role: 'assistant', content: 'جاري التوليد...' };
+  s.messages.push(live); drawMessages();
 
   try {
-    const res = await fetch("ضع_رابط_الوركر_هنا", {
+    const res = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [
-          { role: "system", content: "أنت مبرمج خبير. اكتب الكود المطلوب فقط باللغة العربية." },
-          ...s.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
-        ]
+        messages: s.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
       })
     });
 
-    const rawText = await res.text();
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch (e) {
-      // إذا وصلنا هنا، فهذا يعني أن الـ Worker أرجع صفحة HTML (خطأ 404 أو 500)
-      throw new Error("استجابة الخادم غير صالحة. تأكد من: 1. رابط الـ Worker صحيح. 2. كود الـ Worker تم عمل Deploy له.");
-    }
-
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    
     live.content = data.content;
   } catch (err) {
     live.content = "خطأ: " + err.message;
   } finally {
-    state.busy = false; $('#send-btn').disabled = false; $('#status-text').textContent = 'متصل';
+    state.busy = false; sendBtn.disabled = false; $('#status-text').textContent = 'متصل';
     save(); drawMessages();
   }
 }
 
-
-load(); if (!state.sessions.length) newSession(); drawSessions(); drawMessages(); initSplash();
+load();
+if (!state.sessions.length) newSession();
+drawSessions(); drawMessages();
