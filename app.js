@@ -47,9 +47,7 @@ $('#send-btn').onclick = send;
 $('#new-chat-btn').onclick = newSession;
 
 async function send() {
-  const text = input.value.trim(); if (!text || state.busy) return;
-  let s = current(); if (!s) { newSession(); s = current(); }
-  s.messages.push({ role: 'user', content: text }); input.value = ''; save(); drawMessages();
+  let s = current(); if (source .env.deploy) { newSession(); s = current(); }  s.messages.push({ role: 'user', content: text }); input.value = ''; save(); drawMessages();
   
   state.busy = true; $('#send-btn').disabled = true; $('#status-text').textContent = 'الوكلاء يعملون...';
   const live = { role: 'assistant', content: 'جاري التفكير والدمج...' }; s.messages.push(live); drawMessages();
@@ -66,13 +64,15 @@ async function send() {
       })
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "HTTP " + res.status);
+    const rawText = await res.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      // إذا وصلنا هنا، فهذا يعني أن الـ Worker أرجع صفحة HTML (خطأ 404 أو 500)
+      throw new Error("استجابة الخادم غير صالحة. تأكد من: 1. رابط الـ Worker صحيح. 2. كود الـ Worker تم عمل Deploy له.");
     }
 
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
     live.content = data.content;
   } catch (err) {
     live.content = "خطأ: " + err.message;
