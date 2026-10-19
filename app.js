@@ -51,24 +51,29 @@ async function send() {
   let s = current(); if (!s) { newSession(); s = current(); }
   s.messages.push({ role: 'user', content: text }); input.value = ''; save(); drawMessages();
   
-  state.busy = true; $('#send-btn').disabled = true; $('#status-text').textContent = 'يفكر...';
-  const live = { role: 'assistant', content: 'جاري التوليد...' }; s.messages.push(live); drawMessages();
+  state.busy = true; $('#send-btn').disabled = true; $('#status-text').textContent = 'الوكلاء يعملون...';
+  const live = { role: 'assistant', content: 'جاري التفكير والدمج...' }; s.messages.push(live); drawMessages();
 
   try {
-    const res = await fetch("https://models.github.ai/inference/chat/completions", {
+    const res = await fetch("ضع_رابط_الوركر_هنا", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GITHUB_TOKEN}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o",
         messages: [
-          { role: "system", content: "أنت مبرمج خبير. اكتب الكود المطلوب فقط." },
+          { role: "system", content: "أنت مبرمج خبير. اكتب الكود المطلوب فقط باللغة العربية." },
           ...s.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
         ]
       })
     });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "HTTP " + res.status);
+    }
+
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    live.content = data.choices[0].message.content;
+    if (data.error) throw new Error(data.error);
+    live.content = data.content;
   } catch (err) {
     live.content = "خطأ: " + err.message;
   } finally {
@@ -76,5 +81,6 @@ async function send() {
     save(); drawMessages();
   }
 }
+
 
 load(); if (!state.sessions.length) newSession(); drawSessions(); drawMessages(); initSplash();
